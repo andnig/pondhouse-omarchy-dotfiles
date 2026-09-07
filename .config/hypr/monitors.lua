@@ -2,7 +2,7 @@
 -- List current monitors and supported resolutions with: hyprctl monitors all
 
 local omarchy_gdk_scale = 1
-local omarchy_monitor_scale = 1
+local omarchy_monitor_scale = 1.25
 
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
@@ -16,8 +16,37 @@ hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy
 -- Pondhouse v3 monitor examples (disabled).
 -- Replace output names with values from `hyprctl monitors all` before enabling.
 -- hl.env("GDK_SCALE", "1")
-hl.monitor({ output = "DP-1", mode = "preferred", position = "auto", scale = tostring(omarchy_gdk_scale) })
-hl.monitor({ output = "HDMI-A-1", mode = "preferred", position = "auto", scale = tostring(omarchy_gdk_scale), mirror = "DP-1" })
-hl.monitor({ output = "sunshine", mode = "preferred", position = "auto", scale = tostring(omarchy_gdk_scale), mirror = "DP-1" })
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = tostring(omarchy_gdk_scale) })
+hl.monitor({ output = "DP-1", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+hl.monitor({ output = "HDMI-A-1", mode = "preferred", position = "auto", scale = omarchy_monitor_scale, mirror = "DP-1" })
+-- Independent 4K output for Sunshine; created by Sunshine's startup helper.
+hl.monitor({ output = "sunshine", mode = "3840x2160@60", position = "auto", scale = 1 })
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
 -- End Pondhouse monitor examples.
+
+-- Hyprland can retain focus on an output after it becomes a mirror. A mirror's
+-- workspace ID 0 means it owns no workspace, so windows cannot map there.
+-- Recover by focusing any real output that has an active workspace.
+local function get_pondhouse_source_monitor()
+  for _, monitor in ipairs(hl.get_monitors()) do
+    if not monitor.is_mirror and monitor.active_workspace then
+      return monitor
+    end
+  end
+end
+
+local function focus_pondhouse_source_monitor()
+  local active = hl.get_active_monitor()
+  if active and not active.is_mirror and active.active_workspace then
+    return
+  end
+
+  local source = get_pondhouse_source_monitor()
+  if source then
+    hl.dispatch(hl.dsp.focus({ monitor = source }))
+  end
+end
+
+hl.on("hyprland.start", focus_pondhouse_source_monitor)
+hl.on("monitor.added", focus_pondhouse_source_monitor)
+hl.on("monitor.layout_changed", focus_pondhouse_source_monitor)
+-- End Pondhouse mirrored monitor focus fix.

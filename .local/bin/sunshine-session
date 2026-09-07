@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Sunshine startup commands for the dedicated Hyprland streaming display."""
+
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+MONITOR = "sunshine"
+WORKSPACE = "name:sunshine"
+STATE = Path(os.environ["XDG_RUNTIME_DIR"]) / "sunshine-workspace-focus.json"
+
+
+def query(command):
+    return json.loads(subprocess.check_output(["hyprctl", command, "-j"], text=True))
+
+
+def hypr(*arguments):
+    result = subprocess.run(["hyprctl", *arguments], capture_output=True, text=True, check=True)
+    if result.stdout.strip() != "ok":
+        raise RuntimeError(result.stdout.strip() or result.stderr.strip())
+
+
+def display():
+    if not any(m["name"] == MONITOR for m in query("monitors")):
+        hypr("output", "create", "headless", MONITOR)
+    for _ in range(30):
+        monitor = next((m for m in query("monitors") if m["name"] == MONITOR), None)
+        if monitor and (monitor["width"], monitor["height"]) == (3840, 2160):
+            if monitor["mirrorOf"] != "none":
+                raise RuntimeError("sunshine must be an independent output, not a mirror")
+            return
+        time.sleep(0.1)
+    raise RuntimeError("sunshine did not become a 3840x2160 output; check hypr/monitors.lua")
+
+
+def prepare():
+    display()
+    if not STATE.exists():
+        monitor = next((m["name"] for m in query("monitors") if m["focused"]), "DP-1")
+        STATE.write_text(json.dumps({"monitor": monitor, "window": query("activewindow").get("address")}))
+    # These are session startup actions, not persistent workspace/window rules.
+    hypr("eval", 'hl.dispatch(hl.dsp.focus({ monitor = "sunshine" })); '
+         'hl.dispatch(hl.dsp.focus({ workspace = "name:sunshine" })); '
+         'hl.dispatch(hl.dsp.workspace.move({ workspace = "name:sunshine", monitor = "sunshine" }))')
+
+
+def steam():
+    prepare()
+    log = Path.home() / ".config/sunshine/steam-launch.log"
+    with log.open("a") as output:
+        # setsid alone does not escape Sunshine's service cgroup. A separate
+        # scope keeps Steam and games alive when Sunshine is restarted.
+        subprocess.Popen(["systemd-run", "--user", "--scope", "--collect", "--quiet",
+                          f"--unit=app-sunshine-steam-{os.getpid()}",
+                          "steam", "steam://open/bigpicture"], stdout=output,
+                         stderr=subprocess.STDOUT, start_new_session=True)
+    # Steam may already be running elsewhere; exec placement alone cannot move it.
+    for _ in range(120):
+        windows = [w for w in query("clients") if w["class"].lower() == "steam"
+                   and "big picture" in w["title"].lower()]
+        if windows:
+            window = json.dumps("address:" + windows[0]["address"])
+            hypr("eval", f'hl.dispatch(hl.dsp.window.move({{ window = {window}, '
+                 f'workspace = "{WORKSPACE}", follow = true }})); '
+                 f'hl.dispatch(hl.dsp.window.fullscreen({{ window = {window}, '
+                 'action = "set", mode = "fullscreen" })); '
+                 f'hl.dispatch(hl.dsp.focus({{ window = {window} }}))')
+            print("Steam Big Picture placed on sunshine (3840x2160)")
+            return
+        time.sleep(0.25)
+    raise RuntimeError(f"Steam Big Picture did not appear within 30 seconds; see {log}")
+
+
+def finish():
+    saved = json.loads(STATE.read_text()) if STATE.exists() else None
+    if any(m["name"] == MONITOR for m in query("monitors")):
+        hypr("output", "remove", MONITOR)
+    if not saved:
+        return
+    windows = query("clients")
+    if saved.get("window") and any(w["address"] == saved["window"] for w in windows):
+        selector = "window = " + json.dumps("address:" + saved["window"])
+    else:
+        monitors = query("monitors")
+        monitor = next((m["name"] for m in monitors if m["name"] == saved["monitor"]),
+                       monitors[0]["name"])
+        selector = "monitor = " + json.dumps(monitor)
+    hypr("eval", "hl.dispatch(hl.dsp.focus({ " + selector + " }))")
+    STATE.unlink()
+
+
+if __name__ == "__main__":
+    actions = {"display": display, "prepare": prepare, "steam": steam, "finish": finish}
+    if len(sys.argv) != 2 or sys.argv[1] not in actions:
+        sys.exit("Usage: sunshine-session {display|prepare|steam|finish}")
+    try:
+        actions[sys.argv[1]]()
+    except (RuntimeError, subprocess.SubprocessError, OSError) as error:
+        sys.exit(f"sunshine-session: {error}")

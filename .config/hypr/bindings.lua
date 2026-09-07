@@ -28,6 +28,8 @@
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
 
+o.bind("SUPER + CTRL + G", "Herdr agents", "omarchy shell jankeesvw.herdr toggle")
+
 -- Pondhouse v3 Teams shortcut example (employee-owned and disabled).
 -- Uncomment after choosing the employee-specific Teams launcher to run.
 -- hl.unbind("SUPER + SHIFT + T")
