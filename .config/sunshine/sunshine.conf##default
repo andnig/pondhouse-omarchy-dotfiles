@@ -1,0 +1,5 @@
+capture = wlr
+gamepad = xone
+global_prep_cmd = [{"do":"/home/andreas/.local/bin/sunshine-session prepare","undo":"/home/andreas/.local/bin/sunshine-session finish"}]
+output_name = sunshine
+stream_audio = true

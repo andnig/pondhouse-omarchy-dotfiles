@@ -39,7 +39,7 @@ def display():
 def prepare():
     display()
     if not STATE.exists():
-        monitor = next((m["name"] for m in query("monitors") if m["focused"]), "DP-1")
+        monitor = next((m["name"] for m in query("monitors") if m["focused"]), "")
         STATE.write_text(json.dumps({"monitor": monitor, "window": query("activewindow").get("address")}))
     # These are session startup actions, not persistent workspace/window rules.
     hypr("eval", 'hl.dispatch(hl.dsp.focus({ monitor = "sunshine" })); '

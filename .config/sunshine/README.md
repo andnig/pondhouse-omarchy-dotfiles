@@ -3,19 +3,24 @@
 This setup captures an independent `sunshine` display at 3840×2160, 60 Hz,
 using Wayland capture and automatic encoder selection. NVIDIA hosts can use
 NVENC; AMD hosts can select their supported encoder (such as VAAPI).
-The shared configuration does not force an NVIDIA encoder. `nvenc_preset` only
-applies when NVENC is selected.
+The shared configuration does not force an NVIDIA encoder. NVENC tuning lives only
+in this NVIDIA host's yadm alternate.
 
 ## Files
 
-- `~/.config/sunshine/sunshine.conf`: capture, encoder, output, and session commands.
+- `~/.config/sunshine/sunshine.conf`: capture, output, and session commands. A yadm
+  alternate: `##default` for all machines, `##hostname.archlinux` adds NVENC tuning.
 - `~/.config/sunshine/apps.json`: Moonlight applications and Steam launcher.
 - `~/.local/bin/sunshine-session`: creates the output, moves workspace `sunshine`
   to it, places Steam Big Picture there, then removes the output and restores
   previous focus when the session is quit.
-- `~/.config/hypr/monitors.lua`: the independent 4K monitor definition.
-- `~/.config/systemd/user/app-dev.lizardbyte.app.Sunshine.service.d/display.conf`:
-  creates the output before Sunshine probes capture devices.
+- `~/.config/hypr/monitors.lua`: the independent 4K monitor definition. A yadm
+  alternate: `##default` for all machines, `##hostname.archlinux` adds that host's
+  DP-1/HDMI-A-1 mirror layout.
+
+The `sunshine` output exists only during a session: Sunshine's global prep command
+creates it when a Moonlight session starts and removes it when the session is
+quit. Outside streaming there is no hidden display and no extra workspaces.
 
 Steam is launched in its own systemd scope so restarting Sunshine does not stop
 Steam or its games. Workspace placement uses startup commands, not Steam-specific
@@ -68,6 +73,7 @@ paths in `sunshine.conf` and `apps.json` if restoring under another username.
 ```sh
 hyprctl reload
 hyprctl configerrors
+yadm alt
 systemctl --user daemon-reload
 systemctl --user enable --now app-dev.lizardbyte.app.Sunshine.service
 ```

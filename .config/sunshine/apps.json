@@ -20,7 +20,7 @@
     {
       "name": "Steam Big Picture",
       "detached": [
-        "setsid systemd-run --user --scope --collect --quiet steam steam://open/bigpicture"
+        "setsid /home/andreas/.local/bin/sunshine-session steam"
       ],
       "prep-cmd": [
         {
