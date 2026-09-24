@@ -38,6 +38,7 @@ fi
 #
 # Make an alias for invoking commands you use constantly
 # alias p='python'
+alias oc2='opencode2'
 
 # [[ ${BLE_VERSION-} ]] && ble-attach
 
@@ -147,3 +148,11 @@ fi
 #   command -v herdr >/dev/null 2>&1; then
 #   herdr
 # fi
+
+# pnpm
+export PNPM_HOME="/home/andreas/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
