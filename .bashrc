@@ -156,3 +156,14 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 # pnpm end
+
+# Pondhouse pnpm globals: /home/andreas/.local/share/pnpm/bin
+if [[ -z ${PNPM_HOME:-} ]]; then export PNPM_HOME=/home/andreas/.local/share/pnpm; fi
+case ":$PATH:" in
+  *:/home/andreas/.local/share/pnpm/bin:*) ;;
+  *) export PATH=/home/andreas/.local/share/pnpm/bin:"$PATH" ;;
+esac
+# Pondhouse pnpm globals end
+
+# m365: use the personal-auth wrapper (company-docs tools/m365-personal-auth), not pnpm's bare launcher
+[[ -x "$HOME/.local/bin/m365" ]] && m365() { "$HOME/.local/bin/m365" "$@"; }
