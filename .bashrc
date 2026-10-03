@@ -59,71 +59,7 @@ _pondhouse_fzf_history() {
   READLINE_POINT=${#READLINE_LINE}
 }
 
-_pondhouse_herdr_rename_tab_from_pwd() {
-  [[ ${HERDR_ENV:-0} == "1" && -n ${HERDR_WORKSPACE_ID:-} && -n ${HERDR_TAB_ID:-} ]] || return 0
 
-  local tab_name=${PWD##*/}
-  local tab_number
-  [[ -n $tab_name ]] || tab_name=/
-  (( ${#tab_name} > 24 )) && tab_name="${tab_name:0:21}..."
-  tab_number=$(command herdr tab list --workspace "$HERDR_WORKSPACE_ID" 2>/dev/null |
-    jq -r --arg tab_id "$HERDR_TAB_ID" \
-      '.result.tabs | to_entries[] | select(.value.tab_id == $tab_id) | .key + 1' 2>/dev/null)
-  [[ $tab_number =~ ^[0-9]+$ ]] || return 0
-  command herdr tab rename "$HERDR_TAB_ID" "$tab_number: $tab_name" >/dev/null 2>&1 || true
-}
-
-_pondhouse_herdr_prompt_hook() {
-  local command_status=$?
-  if [[ ${_PONDHOUSE_HERDR_LAST_PWD-} != "$PWD" ]]; then
-    _PONDHOUSE_HERDR_LAST_PWD=$PWD
-    _pondhouse_herdr_rename_tab_from_pwd
-  fi
-  return "$command_status"
-}
-
-_pondhouse_prompt_hook_present=false
-for _pondhouse_prompt_hook in "${PROMPT_COMMAND[@]-}"; do
-  [[ $_pondhouse_prompt_hook == _pondhouse_herdr_prompt_hook ]] && \
-    _pondhouse_prompt_hook_present=true
-done
-if ! $_pondhouse_prompt_hook_present; then
-  if [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == "declare -a"* ]]; then
-    PROMPT_COMMAND+=(_pondhouse_herdr_prompt_hook)
-  elif [[ -n ${PROMPT_COMMAND:-} ]]; then
-    PROMPT_COMMAND=("$PROMPT_COMMAND" _pondhouse_herdr_prompt_hook)
-  else
-    PROMPT_COMMAND=(_pondhouse_herdr_prompt_hook)
-  fi
-fi
-unset _pondhouse_prompt_hook _pondhouse_prompt_hook_present
-_pondhouse_herdr_prompt_hook
-
-_pondhouse_herdr_renumber_tabs_on_exit() {
-  local command_status=$?
-  local pane_exit_command=${PONDHOUSE_HERDR_PANE_EXIT_COMMAND:-$HOME/scripts/herdr-renumber-after-pane-exit.sh}
-  if [[ ${HERDR_ENV:-0} == "1" && -n ${HERDR_PANE_ID:-} && \
-    -x $pane_exit_command ]]; then
-    "$pane_exit_command" "$HERDR_PANE_ID" >/dev/null 2>&1 || true
-  fi
-  return "$command_status"
-}
-
-_pondhouse_install_exit_hook() {
-  local current previous=""
-  current=$(trap -p EXIT)
-  [[ $current == *'_pondhouse_herdr_renumber_tabs_on_exit'* ]] && return 0
-
-  if [[ -n $current ]]; then
-    current=${current#trap -- }
-    current=${current% EXIT}
-    eval "previous=$current"
-    trap "_pondhouse_herdr_renumber_tabs_on_exit"$'\n'"$previous" EXIT
-  else
-    trap _pondhouse_herdr_renumber_tabs_on_exit EXIT
-  fi
-}
-_pondhouse_install_exit_hook
 
 if enable -f "$HOME/.local/lib/bash/libflyline.so" flyline 2>/dev/null; then
   flyline --load-zsh-history

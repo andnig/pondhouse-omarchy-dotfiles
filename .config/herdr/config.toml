@@ -127,6 +127,18 @@ type = "shell"
 command = "$HOME/scripts/herdr-move-tab.sh right"
 description = "move tab right"
 
+[[keys.command]]
+key = "prefix+e"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.toggle"
+description = "nvim sidebar"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.pick-file"
+description = "open file from agent output"
+
 [ui]
 agent_panel_sort = "spaces"
 confirm_close = true
