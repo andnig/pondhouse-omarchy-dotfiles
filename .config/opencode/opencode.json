@@ -12,7 +12,10 @@
       }
     }
   },
-  "plugins": ["opencode-claude-auth-v2@latest"],
+  "plugins": [
+    "github:andnig/opencode-claude-auth-v2#2bdbe91fbb0774fedb1610619befac68d25a7b5e",
+    "github:pondhouse-data/opencode-herdr-titles#v0.2.1"
+  ],
   "mcp": {
     "microsoft-learn": {
       "type": "remote",
